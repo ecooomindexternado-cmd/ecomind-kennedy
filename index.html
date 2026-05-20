@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ECOMIND · PM2.5 Kennedy</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://unpkg.com/leaflet/dist/leaflet.css">
+
+<style>
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  font-family:'Poppins',sans-serif;
+  background:#03110b;
+  color:white;
+}
+
+.page{
+  min-height:100vh;
+  display:grid;
+  grid-template-columns:1.25fr .75fr;
+  gap:18px;
+  padding:22px;
+  background:linear-gradient(135deg,#03110b,#123820);
+}
+
+#map{
+  height:94vh;
+  border-radius:30px;
+  border:5px solid rgba(255,255,255,.15);
+  box-shadow:0 15px 40px rgba(0,0,0,.5);
+}
+
+.panel{
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:30px;
+  padding:24px;
+  box-shadow:0 15px 40px rgba(0,0,0,.4);
+  overflow:auto;
+}
+
+.logo{
+  color:#8fd17f;
+  font-size:30px;
+  font-weight:900;
+  margin-bottom:16px;
+}
+
+h1{
+  font-size:30px;
+  line-height:1;
+  margin:0 0 12px;
+}
+
+p{
+  font-size:14px;
+  line-height:1.45;
+}
+
+.station{
+  font-size:23px;
+  font-weight:900;
+  color:#dff2d2;
+  margin-top:18px;
+}
+
+.value{
+  font-size:56px;
+  font-weight:900;
+  color:#f2a541;
+}
+
+.status{
+  margin-top:10px;
+  padding:12px 15px;
+  border-radius:18px;
+  font-weight:800;
+  color:#07120c;
+}
+
+.legend{
+  display:grid;
+  gap:6px;
+  margin-top:16px;
+}
+
+.legend div{
+  font-size:12px;
+}
+
+.note{
+  font-size:11px;
+  opacity:.75;
+  margin-top:14px;
+}
+
+.video-box{
+  margin-top:18px;
+  background:#f7f8ef;
+  color:#173f26;
+  border-radius:22px;
+  padding:16px;
+}
+
+.video-box a{
+  display:block;
+  background:#2f6b2f;
+  color:white;
+  text-align:center;
+  text-decoration:none;
+  padding:13px;
+  border-radius:16px;
+  font-weight:900;
+  margin-top:10px;
+}
+
+.guide{
+  margin-top:18px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.14);
+  border-radius:22px;
+  padding:16px;
+}
+
+.guide h3{
+  margin:0 0 10px;
+  color:#dff2d2;
+  font-size:17px;
+}
+
+.guide-item{
+  background:rgba(255,255,255,.08);
+  border-radius:16px;
+  padding:11px;
+  margin-top:9px;
+}
+
+.guide-item strong{
+  display:block;
+  color:#8fd17f;
+  font-size:13px;
+}
+
+.guide-item span{
+  display:block;
+  font-size:11px;
+  opacity:.9;
+  margin-top:3px;
+}
+
+.animation-box{
+  margin-top:18px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:22px;
+  padding:16px;
+  overflow:hidden;
+}
+
+.animation-scene{
+  position:relative;
+  height:150px;
+  background:linear-gradient(90deg,#0b1f14,#173f26);
+  border-radius:18px;
+  overflow:hidden;
+}
+
+.road{
+  position:absolute;
+  bottom:22px;
+  left:0;
+  width:100%;
+  height:34px;
+  background:#202020;
+}
+
+.truck{
+  position:absolute;
+  bottom:45px;
+  left:18px;
+  font-size:34px;
+}
+
+.lungs{
+  position:absolute;
+  right:22px;
+  top:40px;
+  font-size:48px;
+  animation:pulse 2s infinite;
+}
+
+.pm{
+  position:absolute;
+  width:9px;
+  height:9px;
+  background:#f2a541;
+  border-radius:50%;
+  left:70px;
+  top:65px;
+  animation:movePM 3s infinite linear;
+}
+
+.pm:nth-child(2){animation-delay:.4s; top:85px}
+.pm:nth-child(3){animation-delay:.8s; top:55px}
+.pm:nth-child(4){animation-delay:1.2s; top:75px}
+.pm:nth-child(5){animation-delay:1.6s; top:95px}
+
+@keyframes movePM{
+  from{transform:translateX(0); opacity:1}
+  to{transform:translateX(240px); opacity:.25}
+}
+
+@keyframes pulse{
+  0%{transform:scale(1)}
+  50%{transform:scale(1.08)}
+  100%{transform:scale(1)}
+}
+
+.leaflet-tooltip{
+  font-family:Poppins,sans-serif;
+  font-weight:800;
+  border-radius:10px;
+}
+
+@media(max-width:900px){
+  .page{
+    grid-template-columns:1fr;
+  }
+
+  #map{
+    height:58vh;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<div class="page">
+
+  <div id="map"></div>
+
+  <div class="panel">
+
+    <div class="logo">ECO MIND</div>
+
+    <h1>Mapa PM2.5 por estaciones</h1>
+
+    <p>
+      Toca una estación para ver el dato disponible de PM2.5. Kennedy aparece resaltada porque es el caso central del póster.
+    </p>
+
+    <div class="station" id="stationName">Kennedy</div>
+
+    <div class="value">
+      <span id="pmValue">--</span>
+    </div>
+
+    <div class="status" id="statusBox">
+      Consultando dato real...
+    </div>
+
+    <div class="legend">
+      <div>🟢 Bajo</div>
+      <div>🟡 Moderado</div>
+      <div>🟠 Riesgo sensible</div>
+      <div>🔴 Alto</div>
+      <div>🟣 Muy alto</div>
+      <div>⚪ Sin dato</div>
+    </div>
+
+    <p class="note">
+      Fuente: WAQI/AQICN. Para Bogotá, los datos están asociados a OAB/RMCAB. El dato en vivo cambia por hora.
+    </p>
+
+    <div class="animation-box">
+      <strong>¿Cómo afecta el PM2.5?</strong>
+      <p>Las partículas finas salen de fuentes móviles, entran por la respiración y pueden afectar la salud.</p>
+
+      <div class="animation-scene">
+        <div class="road"></div>
+        <div class="truck">🚚💨</div>
+        <div class="pm"></div>
+        <div class="pm"></div>
+        <div class="pm"></div>
+        <div class="pm"></div>
+        <div class="pm"></div>
+        <div class="lungs">🫁</div>
+      </div>
+    </div>
+
+    <div class="guide">
+      <h3>¿Por qué Kennedy aunque hoy el dato salga bajo?</h3>
+
+      <div class="guide-item">
+        <strong>1. El dato cambia cada hora</strong>
+        <span>Viento, lluvia y tráfico pueden bajar o subir el PM2.5 del momento.</span>
+      </div>
+
+      <div class="guide-item">
+        <strong>2. Importa la exposición histórica</strong>
+        <span>El póster reúne la evidencia estructural: Kennedy, carga, industria y salud pública.</span>
+      </div>
+
+      <div class="guide-item">
+        <strong>3. El KCV responde al problema de fondo</strong>
+        <span>No busca corregir solo el dato de hoy, sino reducir emisiones de camiones obsoletos.</span>
+      </div>
+    </div>
+
+    <div class="video-box">
+      <strong>Video Kennedy Clean Voucher</strong>
+      <p>Explicación rápida del funcionamiento del KCV.</p>
+
+      <a href="https://youtu.be/9Zma6TOXGJk" target="_blank">
+        Ver video ▶
+      </a>
+    </div>
+
+  </div>
+
+</div>
+
+<script src="https://unpkg.com/leaflet/dist/leaflet.js"></script>
+
+<script>
+const TOKEN = "b8aba104b77e67de3b68921287349340c44bf7fa";
+
+const zones = [
+  {name:"Kennedy", lat:4.6266, lon:-74.1573, focus:true},
+  {name:"Carvajal-Sevillana", lat:4.5958, lon:-74.1485},
+  {name:"Fontibón", lat:4.6786, lon:-74.1417},
+  {name:"Puente Aranda", lat:4.6310, lon:-74.1110},
+  {name:"Bosa", lat:4.6097, lon:-74.1850},
+  {name:"Tunal", lat:4.5760, lon:-74.1300},
+  {name:"San Cristóbal", lat:4.5570, lon:-74.0830},
+  {name:"Suba", lat:4.7410, lon:-74.0840},
+  {name:"Las Ferias", lat:4.6900, lon:-74.0820},
+  {name:"Mosquera", lat:4.7059, lon:-74.2302, regional:true},
+  {name:"Facatativá", lat:4.8137, lon:-74.3545, regional:true},
+  {name:"Chía", lat:4.8615, lon:-74.0329, regional:true},
+  {name:"Cajicá", lat:4.9186, lon:-74.0270, regional:true}
+];
+
+const map = L.map("map").setView([4.72,-74.15],10);
+
+L.tileLayer(
+  "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png",
+  {attribution:"© OpenStreetMap © CARTO"}
+).addTo(map);
+
+function getColor(value){
+  if(value === null) return "#9ca3af";
+  if(value <= 50) return "#4ade80";
+  if(value <= 100) return "#facc15";
+  if(value <= 150) return "#fb923c";
+  if(value <= 200) return "#ef4444";
+  return "#a855f7";
+}
+
+function getText(value,name){
+  if(value === null) return `${name}: sin dato PM2.5 disponible.`;
+  if(value <= 50) return `${name}: nivel bajo en este momento.`;
+  if(value <= 100) return `${name}: nivel moderado.`;
+  if(value <= 150) return `${name}: riesgo para población sensible.`;
+  if(value <= 200) return `${name}: nivel alto.`;
+  return `${name}: nivel muy alto.`;
+}
+
+async function fetchData(zone){
+  const url = `https://api.waqi.info/feed/geo:${zone.lat};${zone.lon}/?token=${TOKEN}`;
+
+  try{
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if(data.status !== "ok") return null;
+
+    const pm25 =
+      data.data.iaqi &&
+      data.data.iaqi.pm25
+      ? data.data.iaqi.pm25.v
+      : null;
+
+    if(pm25 === null) return null;
+
+    return {
+      value:pm25,
+      station:data.data.city ? data.data.city.name : "estación cercana"
+    };
+
+  }catch(error){
+    return null;
+  }
+}
+
+function updatePanel(zone,result){
+  const value = result ? result.value : null;
+  const color = getColor(value);
+
+  document.getElementById("stationName").innerText = zone.name;
+  document.getElementById("pmValue").innerText = value !== null ? value : "--";
+  document.getElementById("statusBox").innerText = getText(value,zone.name);
+  document.getElementById("statusBox").style.background = color;
+}
+
+async function start(){
+  for(const zone of zones){
+    const result = await fetchData(zone);
+    const value = result ? result.value : null;
+    const color = getColor(value);
+
+    const marker = L.circleMarker([zone.lat, zone.lon], {
+      radius: zone.focus ? 22 : zone.regional ? 15 : 16,
+      color: zone.focus ? "#ffffff" : zone.regional ? "#38bdf8" : color,
+      fillColor: color,
+      fillOpacity:.95,
+      weight: zone.focus ? 4 : 3
+    }).addTo(map);
+
+    marker.bindTooltip(
+      value !== null ? `${zone.name}: ${value}` : `${zone.name}: sin dato`,
+      {permanent:true, direction:"top"}
+    );
+
+    marker.on("click", () => updatePanel(zone,result));
+
+    if(zone.focus){
+      updatePanel(zone,result);
+    }
+  }
+}
+
+start();
+</script>
+
+</body>
+</html>
